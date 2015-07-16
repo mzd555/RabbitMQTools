@@ -1,4 +1,4 @@
-﻿<#
+<#
 .Synopsis
    Adds Queue to RabbitMQ server.
 
@@ -74,6 +74,10 @@ function Add-RabbitMQQueue
         [parameter(ValueFromPipelineByPropertyName=$true)]
         [switch]$AutoDelete = $false,
 
+        # Name/Value pairs of additional queue features
+        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [hashtable]$Arguments,
+
         # Name of the computer hosting RabbitMQ server. Defalut value is localhost.
         [parameter(ValueFromPipelineByPropertyName=$true)]
         [Alias("HostName", "hn", "cn")]
@@ -110,8 +114,11 @@ function Add-RabbitMQQueue
                 $body = @{}
                 if ($Durable) { $body.Add("durable", $true) }
                 if ($AutoDelete) { $body.Add("auto_delete", $true) }
+                if ($Arguments) { $body.Add("arguments", $Arguments) }
 
                 $bodyJson = $body | ConvertTo-Json
+                Write-Verbose $bodyJson
+
                 $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson
 
                 Write-Verbose "Created Queue $n on $ComputerName/$VirtualHost"
