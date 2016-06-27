@@ -1,4 +1,4 @@
-﻿<#
+<#
 .Synopsis
    Adds Queue to RabbitMQ server.
 
@@ -90,7 +90,15 @@ function Add-RabbitMQQueue
 
         # Credentials to use when logging to RabbitMQ server.
         [Parameter(Mandatory=$true, ParameterSetName='cred')]
-        [PSCredential]$Credentials
+        [PSCredential]$Credentials,
+
+        #x-dead-letter-exchange
+        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [string]$DeadLetterExchange,
+
+        #x-dead-letter-routing-key
+        [parameter(ValueFromPipelineByPropertyName=$true)]
+        [string]$DeadLetterRoutingKey
     )
 
     Begin
@@ -111,7 +119,29 @@ function Add-RabbitMQQueue
                 if ($Durable) { $body.Add("durable", $true) }
                 if ($AutoDelete) { $body.Add("auto_delete", $true) }
 
+                #{"vhost":"/","name":"testmolar","durable":"true","auto_delete":"false","arguments":{"x-dead-letter-exchange":"prince.messagequeue","x-dead-letter-routing-key":"prince.test.key"}}
+
+                $arguments = @{}
+
+                if($DeadLetterExchange)
+                {
+                    $arguments.Add("x-dead-letter-exchange",$DeadLetterExchange)
+                    #Write-Host "adding dead letter exchange"
+                }
+
+                if($DeadLetterRoutingKey)
+                    { $arguments.Add("x-dead-letter-routing-key",$DeadLetterRoutingKey)}
+
+                #Write-Host $arguments.Count
+                if($arguments.Count -gt 0)
+                   { 
+                    $body.Add("arguments", $arguments) 
+                  }
+                
                 $bodyJson = $body | ConvertTo-Json
+
+                Write-Verbose "body to be sent $bodyJson"
+
                 $result = Invoke-RestMethod $url -Credential $Credentials -AllowEscapedDotsAndSlashes -DisableKeepAlive -ErrorAction Continue -Method Put -ContentType "application/json" -Body $bodyJson
 
                 Write-Verbose "Created Queue $n on $ComputerName/$VirtualHost"
